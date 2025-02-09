@@ -81,8 +81,22 @@
     </div>
     <script src="js/firebase-config.js" type="module"></script>
     <script type="module">
-        import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-auth.js';
+        import { 
+            getAuth, 
+            onAuthStateChanged,  
+            reauthenticateWithCredential, 
+            updatePassword, 
+            signOut,
+            setPersistence,
+            signInWithEmailAndPassword,
+            EmailAuthProvider,
+            browserLocalPersistence,
+            deleteUser,
+            createUserWithEmailAndPassword, 
+            sendEmailVerification
+        } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-auth.js';
         import { getFirestore, doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-firestore.js';
+        import { auth, db } from './js/firebase-config.js';
 
         // Function to validate email domain
         function validateEmail() {

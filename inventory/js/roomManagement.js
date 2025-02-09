@@ -14,7 +14,7 @@ import {
     serverTimestamp,
     Timestamp
 } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-firestore.js';
-import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-auth.js';
+import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-auth.js';
 
 let user = null;
 let floorModal = null;
@@ -25,6 +25,9 @@ let roomDetailsModal;
 // Initialize variables
 let currentRoomId = null;
 let currentFloorId = null;
+
+// Version constant for cache busting
+const APP_VERSION = '1.0.0';
 
 // Function to log activity
 async function logActivity(action, data) {
@@ -135,8 +138,8 @@ async function loadActivityLogs() {
         }
 
         // Get filter values
-        const typeFilterValue = typeFilter.value.toLowerCase();
-        const roleFilterValue = roleFilter.value.toLowerCase();
+        const typeFilterValue = typeFilter.value;
+        const roleFilterValue = roleFilter.value;
         const searchTextValue = searchText.value.toLowerCase();
 
         const logs = [];
@@ -144,14 +147,19 @@ async function loadActivityLogs() {
             const log = doc.data();
             
             // Apply filters
-            if (typeFilterValue && log.type?.toLowerCase() !== typeFilterValue) continue;
-            if (roleFilterValue && log.role?.toLowerCase() !== roleFilterValue) continue;
-            if (searchTextValue && !log.details?.toLowerCase().includes(searchTextValue)) continue;
+            const matchesType = !typeFilterValue || typeFilterValue === 'all' || log.action?.toLowerCase() === typeFilterValue.toLowerCase();
+            const matchesRole = !roleFilterValue || roleFilterValue === 'all' || log.role?.toLowerCase() === roleFilterValue.toLowerCase();
+            const matchesSearch = !searchTextValue || 
+                                log.details?.toLowerCase().includes(searchTextValue) || 
+                                log.userName?.toLowerCase().includes(searchTextValue) ||
+                                log.email?.toLowerCase().includes(searchTextValue);
 
-            logs.push({
-                id: doc.id,
-                ...log
-            });
+            if (matchesType && matchesRole && matchesSearch) {
+                logs.push({
+                    id: doc.id,
+                    ...log
+                });
+            }
         }
 
         // Sort logs by timestamp (newest first)
@@ -296,25 +304,14 @@ function getActionClass(action) {
     return 'bg-secondary';
 }
 
-// Load rooms from Firestore
-async function loadSavedRooms() {
-    try {
-        const snapshot = await getDocs(collection(db, 'rooms'));
-        const roomsData = {};
-        snapshot.forEach((doc) => {
-            const room = doc.data();
-            if (!roomsData[room.floor]) {
-                roomsData[room.floor] = [];
-            }
-            roomsData[room.floor].push({
-                id: doc.id,
-                ...room
-            });
-        });
-        updateAllFloors(roomsData);
-    } catch (error) {
-        console.error("Error loading rooms:", error);
-    }
+// Function to clear browser cache
+function clearCache() {
+    // Append version to all script and link elements
+    document.querySelectorAll('script[src], link[rel="stylesheet"]').forEach(el => {
+        const url = new URL(el.src || el.href);
+        url.searchParams.set('v', APP_VERSION);
+        el.src = url.toString();
+    });
 }
 
 // Show room management modal
@@ -543,8 +540,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         await loadSavedRooms();
                         await updateFloorsList();
                         await updateAllFloors();
+                        await refreshPageContent();
 
                         showToast('Room removed successfully!', 'success');
+
                     } catch (error) {
                         console.error('Error removing room:', error);
                         showToast('Error removing room. Please try again.', 'error');
@@ -601,11 +600,16 @@ async function deleteRoom(roomId) {
         // Show success message
         showToast(`Room ${roomData.number} has been successfully deleted.`, 'success');
 
+
         // Update the display
+        await backToDashboard();
         await updateDashboardStats();
         await loadSavedRooms();
         await updateFloorsList();
         await updateAllFloors();
+
+
+        showToast(`Refresh The Page If adding new room`, 'warning');
 
         // Log activity
         await logActivity('delete', `Deleted room ${roomData.number} and all associated records`);
@@ -799,7 +803,9 @@ async function showRoomDetails(roomId) {
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h2 class="mb-0">Room ${roomData.number}</h2>
-                    <p class="text-muted">${roomData.name || 'No name'}</p>
+                    <div class="d-flex align-items-center">
+                        <p class="text-muted mb-0 me-2">${roomData.name || 'No name'}</p>
+                    </div>
                 </div>
                 <div class="btn-group">
                     <button type="button" class="btn btn-outline-danger" onclick="confirmDeleteRoom('${roomId}')">
@@ -979,7 +985,6 @@ async function addEquipment(roomId) {
             return;
         }
 
-        const roomData = roomDoc.data();
         const equipmentData = {
             name: document.getElementById('equipmentName').value,
             quantity: parseInt(document.getElementById('equipmentQuantity').value),
@@ -988,7 +993,7 @@ async function addEquipment(roomId) {
             notes: document.getElementById('equipmentNotes').value,
             addedAt: serverTimestamp(),
             roomId: roomId,
-            floor: roomData.floor // Store the floor number as well
+            floor: roomDoc.data().floor // Store the floor number as well
         };
 
         // Add equipment to the specific room's equipment collection
@@ -1598,6 +1603,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial load of dashboard stats
     updateDashboardStats();
+
+    // Update the logout functionality
+    document.querySelector('.logoutBTN')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        showConfirmation(
+            'Are you sure you want to log out?',
+            async () => {
+                try {
+                    await signOut(auth);
+                    showToast('Successfully logged out!', 'success');
+                    setTimeout(() => window.location.href = 'index.html', 1500);
+                } catch (error) {
+                    showToast('Error logging out: ' + error.message, 'error');
+                }
+            },
+            'Logout Confirmation'
+        );
+    });
 });
 
 // Add floor function
@@ -1667,12 +1690,17 @@ async function removeFloor(floorId, floorNumber) {
 
                     // Update all UI components
                     await Promise.all([
+                        updateAllFloors(),
                         updateFloorsList(),  // Update sidebar accordion and modal list
                         updateFloorSelects(), // Update floor select dropdowns
-                        updateDashboardStats() // Update dashboard statistics
+                        updateDashboardStats(), // Update dashboard statistics
+                        refreshPageContent()
                     ]);
 
+
                     showToast('Floor deleted successfully', 'success');
+
+                    
                 } catch (error) {
                     console.error('Error deleting floor:', error);
                     showToast('Failed to delete floor', 'error');
@@ -1726,9 +1754,6 @@ function updateFloor(floor, roomsData = {}) {
                 <div class="room-item bg-light d-flex justify-content-between align-items-center p-2 mt-2">
                     <a href="#" class="room-link" onclick="showRoomDetails('${room.id}')">${room.number}</a>
                     <div class="btn-group">
-                        <button class="btn btn-sm btn-outline-primary" onclick="editRoom('${room.id}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
                         <button class="btn btn-sm btn-outline-danger" onclick="deleteRoom('${room.id}')">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -1799,13 +1824,17 @@ onAuthStateChanged(auth, (currentUser) => {
 });
 
 // Function to show activity log
-async function showActivityLog() {
-    // Hide default dashboard and show activity log section
+function showActivityLog() {
+    // Hide all sections first
     document.getElementById('defaultDashboard').classList.add('d-none');
-    document.getElementById('activityLogSection').classList.remove('d-none');
-
+    document.getElementById('roomDetailsSection').classList.add('d-none');
+    
+    // Show activity log section
+    const activityLogSection = document.getElementById('activityLogSection');
+    activityLogSection.classList.remove('d-none');
+    
     // Load activity logs
-    await loadActivityLogs();
+    loadActivityLogs();
 }
 
 // Function to go back to dashboard
@@ -1998,23 +2027,99 @@ async function addNeedsReplacement(roomId) {
     }
 }
 
-// Update the logout functionality
-document.querySelector('.logoutBTN')?.addEventListener('click', (e) => {
-    e.preventDefault();
+// Resolve maintenance record
+async function resolveMaintenanceRecord(roomId, recordIndex) {
     showConfirmation(
-        'Are you sure you want to log out?',
+        'Are you sure you want to mark this maintenance record as resolved?',
         async () => {
             try {
-                await signOut(auth);
-                showToast('Successfully logged out!', 'success');
-                setTimeout(() => window.location.href = 'index.html', 1500);
+                const roomRef = doc(db, 'rooms', roomId);
+                const roomDoc = await getDoc(roomRef);
+                if (!roomDoc.exists()) {
+                    showToast('Error', 'Room not found');
+                    return;
+                }
+                const roomData = roomDoc.data();
+                const maintenance = roomData.maintenance || [];
+
+                if (recordIndex >= maintenance.length) {
+                    showToast('Error', 'Invalid maintenance record index');
+                    return;
+                }
+
+                // Update the record's resolved status
+                maintenance[recordIndex].resolved = true;
+                maintenance[recordIndex].resolvedAt = Timestamp.now();
+
+                // Update the room document
+                await updateDoc(roomRef, {
+                    maintenance: maintenance
+                });
+
+                // Log activity
+                await logActivity('resolve', `Resolved maintenance record in room ${roomId}`);
+
+                // Refresh maintenance list
+                loadMaintenanceForRoom(roomId);
+
+                showToast('Success', 'Maintenance record marked as resolved');
             } catch (error) {
-                showToast('Error logging out: ' + error.message, 'error');
+                console.error('Error resolving maintenance record:', error);
+                showToast('Error', 'Failed to resolve maintenance record');
             }
         },
-        'Logout Confirmation'
+        'Resolve Maintenance Record'
     );
-});
+}
+
+// Resolve replacement record
+async function resolveReplacementRecord(roomId, recordIndex) {
+    showConfirmation(
+        'Are you sure you want to mark this replacement record as resolved?',
+        async () => {
+            try {
+                const roomRef = doc(db, 'rooms', roomId);
+                const roomDoc = await getDoc(roomRef);
+                if (!roomDoc.exists()) {
+                    showToast('Error', 'Room not found');
+                    return;
+                }
+                const roomData = roomDoc.data();
+                const replacements = roomData.replacements || [];
+
+                if (recordIndex >= replacements.length) {
+                    showToast('Error', 'Invalid replacement record index');
+                    return;
+                }
+
+                // Update the record's resolved status
+                replacements[recordIndex].resolved = true;
+                replacements[recordIndex].resolvedAt = Timestamp.now();
+
+                // Update the room document
+                await updateDoc(roomRef, {
+                    replacements: replacements
+                });
+
+                // Log activity
+                await logActivity('resolve', `Resolved replacement record in room ${roomId}`);
+
+                // Refresh replacement list
+                loadReplacementsForRoom(roomId);
+
+                showToast('Success', 'Replacement record marked as resolved');
+            } catch (error) {
+                console.error('Error resolving replacement record:', error);
+                showToast('Error', 'Failed to resolve replacement record');
+            }
+        },
+        'Resolve Replacement Record'
+    );
+}
+
+// Make resolve functions globally available
+window.resolveMaintenanceRecord = resolveMaintenanceRecord;
+window.resolveReplacementRecord = resolveReplacementRecord;
 
 // Load equipment for a room
 async function loadEquipmentForRoom(roomId) {
@@ -2025,65 +2130,46 @@ async function loadEquipmentForRoom(roomId) {
             return;
         }
 
-        // Get the room's equipment collection
-        const equipmentQuery = query(
-            collection(db, `rooms/${roomId}/equipment`),
-            where('roomId', '==', roomId),
-            orderBy('name')
-        );
-        const equipmentSnapshot = await getDocs(equipmentQuery);
+        const equipmentRef = collection(db, `rooms/${roomId}/equipment`);
+        const equipmentSnapshot = await getDocs(equipmentRef);
 
         if (equipmentSnapshot.empty) {
-            equipmentList.innerHTML = '<div class="text-muted text-center py-3">No equipment in this room</div>';
+            equipmentList.innerHTML = '<div class="text-center text-muted py-3">No equipment added yet</div>';
             return;
         }
 
-        equipmentList.innerHTML = '';
-        let totalQuantity = 0;
-        
+        let equipmentHtml = '';
         equipmentSnapshot.forEach(doc => {
             const equipment = doc.data();
-            totalQuantity += equipment.quantity || 0;
-            const equipmentItem = document.createElement('div');
-            equipmentItem.className = 'list-group-item';
-            equipmentItem.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-1">${equipment.name}</h6>
-                        <span class="badge bg-warning">${equipment.status}</span>
-                        <p class="text-muted small mb-1">${equipment.notes}</p>
-                        <small class="text-muted">Added: ${formatTimestamp(equipment.addedAt)}</small>
-                    </div>
-                    <div class="btn-group">
-                        <button class="btn btn-sm btn-outline-primary" onclick="editEquipment('${doc.id}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteEquipment('${doc.id}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
+            equipmentHtml += `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${equipment.name}</h6>
+                            <span class="badge bg-info">${equipment.status}</span>
+                            <p class="text-muted small mb-1">Quantity: ${equipment.quantity}</p>
+                            <small class="text-muted">Added: ${formatTimestamp(equipment.addedAt)}</small>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteEquipment('${doc.id}', '${roomId}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
-            equipmentList.appendChild(equipmentItem);
         });
 
-        // Update equipment count in room header
-        const roomEquipmentCount = document.getElementById('roomEquipmentCount');
-        if (roomEquipmentCount) {
-            roomEquipmentCount.textContent = totalQuantity;
-        }
-
+        equipmentList.innerHTML = equipmentHtml;
     } catch (error) {
         console.error('Error loading equipment:', error);
-        showToast('Error loading equipment. Please try again.', 'error');
+        equipmentList.innerHTML = '<div class="text-center text-danger py-3">Error loading equipment</div>';
     }
 }
 
 // Delete equipment
-async function deleteEquipment(equipmentId) {
+async function deleteEquipment(equipmentId, roomId) {
     try {
-        const roomId = document.getElementById('currentRoomId').value;
-        
         // Show confirmation dialog
         showConfirmation(
             'Are you sure you want to delete this equipment?',
@@ -2138,18 +2224,30 @@ async function loadMaintenanceForRoom(roomId) {
 
         let maintenanceHtml = '';
         maintenance.forEach((record, index) => {
+            const statusBadge = record.resolved ? 
+                `<span class="badge bg-success">Resolved</span>` : 
+                `<span class="badge bg-warning">${record.status}</span>`;
+            const resolveButton = !record.resolved ? 
+                `<button type="button" class="btn btn-sm btn-outline-success" onclick="resolveMaintenanceRecord('${roomId}', ${index})">
+                    <i class="fas fa-check"></i>
+                </button>` : '';
             maintenanceHtml += `
                 <div class="list-group-item">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="mb-1">${record.equipmentName}</h6>
-                            <span class="badge bg-warning">${record.status}</span>
+                            ${statusBadge}
+                            <p class="text-muted small mb-1">Quantity: ${record.quantity}</p>
                             <p class="text-muted small mb-1">${record.description}</p>
                             <small class="text-muted">Reported: ${formatTimestamp(record.createdAt)}</small>
+                            ${record.resolved ? `<br><small class="text-muted">Resolved: ${formatTimestamp(record.resolvedAt)}</small>` : ''}
                         </div>
-                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteMaintenanceRecord('${roomId}', ${index})">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="btn-group">
+                            ${resolveButton}
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteMaintenanceRecord('${roomId}', ${index})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -2221,35 +2319,43 @@ async function loadReplacementsForRoom(roomId) {
         const roomData = roomDoc.data();
         const replacements = roomData.replacements || [];
 
-        replacementList.innerHTML = '';
-
         if (replacements.length === 0) {
             replacementList.innerHTML = '<div class="text-muted text-center py-3">No replacement records found</div>';
             return;
         }
 
-        replacements.forEach((replacement, index) => {
-            const replacementItem = document.createElement('div');
-            replacementItem.className = 'list-group-item';
-            replacementItem.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-1">${replacement.equipmentName}</h6>
-                        <span class="badge bg-danger">${replacement.status}</span>
-                        <p class="text-muted small mb-1">${replacement.description}</p>
-                        <small class="text-muted">Reported: ${formatTimestamp(replacement.createdAt)}</small>
+        let replacementsHtml = '';
+        replacements.forEach((record, index) => {
+            const statusBadge = record.resolved ? 
+                `<span class="badge bg-success">Resolved</span>` : 
+                `<span class="badge bg-danger">${record.status}</span>`;
+            const resolveButton = !record.resolved ? 
+                `<button type="button" class="btn btn-sm btn-outline-success" onclick="resolveReplacementRecord('${roomId}', ${index})">
+                    <i class="fas fa-check"></i>
+                </button>` : '';
+            replacementsHtml += `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${record.equipmentName}</h6>
+                            ${statusBadge}
+                            <p class="text-muted small mb-1">Quantity: ${record.quantity}</p>
+                            <p class="text-muted small mb-1">${record.description}</p>
+                            <small class="text-muted">Reported: ${formatTimestamp(record.createdAt)}</small>
+                            ${record.resolved ? `<br><small class="text-muted">Resolved: ${formatTimestamp(record.resolvedAt)}</small>` : ''}
+                        </div>
+                        <div class="btn-group">
+                            ${resolveButton}
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteReplacementRecord('${roomId}', ${index})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
-                    <button class="btn btn-sm btn-danger delete-replacement" data-index="${index}">
-                        <i class="fas fa-trash"></i>
-                    </button>
                 </div>
             `;
-            replacementList.appendChild(replacementItem);
-
-            // Add delete event listener
-            const deleteBtn = replacementItem.querySelector('.delete-replacement');
-            deleteBtn.onclick = () => deleteReplacementRecord(roomId, index);
         });
+
+        replacementList.innerHTML = replacementsHtml;
     } catch (error) {
         console.error('Error loading replacement records:', error);
     }
@@ -2322,3 +2428,92 @@ async function confirmDeleteRoom(roomId) {
         'Delete Room'
     );
 }
+
+// Function to load room details
+async function loadRoomDetails(roomId) {
+    try {
+        const roomRef = doc(db, 'rooms', roomId);
+        
+        // Get existing room data first
+        const roomDoc = await getDoc(roomRef);
+        if (!roomDoc.exists()) {
+            showToast('Room not found.', 'error');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('roomDetailsModal'));
+            if (modal) {
+                modal.hide();
+            }
+            return;
+        }
+
+        currentRoomId = roomId;
+        const roomData = roomDoc.data();
+
+        // Update room details in the modal
+        document.getElementById('roomDetailsTitle').textContent = `Room ${roomData.number}`;
+        document.getElementById('roomDetailsName').textContent = roomData.name;
+        document.getElementById('roomDetailsNumber').textContent = roomData.number;
+        document.getElementById('roomDetailsFloor').textContent = roomData.floor;
+        document.getElementById('roomDetailsBuilding').textContent = roomData.building;
+
+        // Load equipment, maintenance, and replacements
+        await Promise.all([
+            loadEquipmentForRoom(roomId),
+            loadMaintenanceForRoom(roomId),
+            loadReplacementsForRoom(roomId)
+        ]);
+
+    } catch (error) {
+        console.error('Error loading room details:', error);
+        showToast('Error loading room details. Please try again.', 'error');
+    }
+}
+
+// Function to load saved rooms
+async function loadSavedRooms() {
+    try {
+        const roomsContainer = document.getElementById('roomsContainer');
+        if (!roomsContainer) return;
+
+        roomsContainer.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+        const querySnapshot = await getDocs(collection(db, 'rooms'));
+        
+        if (querySnapshot.empty) {
+            roomsContainer.innerHTML = '<div class="text-center text-muted">No rooms found</div>';
+            return;
+        }
+
+        const roomsHtml = [];
+        querySnapshot.forEach((doc) => {
+            const room = doc.data();
+            roomsHtml.push(`
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">${room.name}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">Room ${room.number}</h6>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    <i class="fas fa-building me-1"></i>${room.building}<br>
+                                    <i class="fas fa-layer-group me-1"></i>Floor ${room.floor}
+                                </small>
+                            </p>
+                            <button class="btn btn-primary btn-sm" onclick="openRoomDetails('${doc.id}')">
+                                <i class="fas fa-info-circle me-1"></i>Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+
+        roomsContainer.innerHTML = roomsHtml.join('');
+
+    } catch (error) {
+        console.error('Error loading rooms:', error);
+        roomsContainer.innerHTML = '<div class="text-center text-danger">Error loading rooms</div>';
+    }
+}
+
+
+// Make refresh function globally available
