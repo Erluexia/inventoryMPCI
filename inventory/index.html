@@ -55,23 +55,11 @@
         </div>
     </div>
 
+    <script src="js/firebase-config.js" type="module"></script>
     <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-app.js';
-        import { getAuth, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-auth.js';
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDEj4Gf9KB-y21YBl7roSyR0C8VMS9NKqA",
-            authDomain: "maryknoll-inventory.firebaseapp.com",
-            projectId: "maryknoll-inventory",
-            storageBucket: "maryknoll-inventory.firebasestorage.app",
-            messagingSenderId: "1031596926539",
-            appId: "1:1031596926539:web:831752736f14a7e6778fce",
-            measurementId: "G-HR9CZTDHGY"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+        import { auth } from './js/firebase-config.js';
+        import { signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-auth.js';
+        import { db } from './js/firebase-config.js';
 
         document.addEventListener('DOMContentLoaded', function () {
             // Functionality to toggle password visibility

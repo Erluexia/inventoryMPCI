@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCPI Inventory - Account Settings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="css/scrollbar.css">
+    <style>
+        .logoutText:hover { color: #dc3545; }
+        .accSetText:hover { color: #0d6efd; }
+
+        .dashboardText:hover {
+            color: #0d6efd;
+        }
+        
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+            height: 100vh;
+            background-color: #fff;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            width: calc(100% - 280px);
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+        }
+
+        .form-control:focus, .btn:focus {
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+
+        .card {
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .status-badge {
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1060;
+        }
+        .toast {
+            background-color: white;
+            min-width: 300px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <div class="sidebar p-4">
+            <h1 class="h3 text-primary mb-4 fw-bold">MCPI / SHS Inventory</h1>
+            <nav>
+                <ul class="list-unstyled mb-4">
+                    <li class="mb-2">
+                        <a href="dashboard.html" class="d-flex align-items-center text-decoration-none text-secondary">
+                            <span class="p-1 dashboardText"><i class="fas fa-home me-2"></i> Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="accountSettings.html" class="d-flex align-items-center text-decoration-none text-primary">
+                            <span class="p-1 accSetText"><i class="fas fa-cog me-2"></i> Account Settings</span>
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="logoutBTN d-flex align-items-center text-decoration-none text-secondary">
+                            <span class="logoutText p-1"><i class="fas fa-sign-out-alt me-2"></i>Logout</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="container-fluid mb-4">
+                <div class="row mb-4">
+                    <div class="col">
+                        <h2 class="h3 mb-0">Account Settings</h2>
+                        <p class="text-muted">Manage your account preferences and information</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="">
+                        <div class="d-flex gap-3">
+                            <!-- Profile Information -->
+                            <div class="card border-0 shadow-sm mb-4 col-lg-6">
+                                <div class="card-header bg-white border-0 py-3">
+                                    <h5 class="card-title mb-0">Profile Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="profileForm">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">First Name</label>
+                                                <input type="text" class="form-control" id="firstname" readonly>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Last Name</label>
+                                                <input type="text" class="form-control" id="lastname" readonly>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Email</label>
+                                                <input type="email" class="form-control" id="email" readonly>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Username</label>
+                                                <input type="text" class="form-control" id="username" readonly>
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label">Role</label>
+                                                <input type="text" class="form-control" id="role" readonly>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+    
+                            <!-- Security Settings -->
+                            <div class="card border-0 shadow-sm mb-4 col-lg-6">
+                                <div class="card-header bg-white border-0 py-3">
+                                    <h5 class="card-title mb-0">Security Settings</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="securityForm">
+                                        <div class="mb-3">
+                                            <label class="form-label">Current Password</label>
+                                            <input type="password" class="form-control" id="currentPassword" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">New Password</label>
+                                            <input type="password" class="form-control" id="newPassword" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Confirm New Password</label>
+                                            <input type="password" class="form-control" id="confirmPassword" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-key me-2"></i>Change Password
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+    
+                        </div>
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Delete Account</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-danger mb-3">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Warning: This action cannot be undone. All your data will be permanently deleted.
+                                </p>
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                                    <i class="fas fa-trash-alt me-2"></i>Delete Account
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
+    <!-- Delete Account Modal -->
+    <div class="modal fade" id="deleteAccountModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Warning: This action cannot be undone. All your data will be permanently deleted.
+                    </div>
+                    <form id="deleteAccountForm">
+                        <div class="mb-3">
+                            <label class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="deletePassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Type "DELETE" to confirm</label>
+                            <input type="text" class="form-control" id="deleteConfirmation" required>
+                        </div>
+                        <button type="submit" class="btn btn-danger" id="confirmDelete" disabled>
+                            <i class="fas fa-trash-alt me-2"></i>Delete Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/firebase-config.js" type="module"></script>
+    <script type="module">
+        import { initializeApp, getApp } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-app.js';
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            EmailAuthProvider, 
+            reauthenticateWithCredential, 
+            updatePassword, 
+            signOut,
+            setPersistence,
+            signInWithEmailAndPassword,
+            browserLocalPersistence,
+            deleteUser
+        } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-auth.js';
+        import { getFirestore, doc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-firestore.js';
+        import { auth } from './js/firebase-config.js';
+        import { db } from './js/firebase-config.js';
+
+
+        // Toast notification function
+        function showToast(message, type = 'info') {
+            const toastContainer = document.querySelector('.toast-container');
+            
+            // Create toast element
+            const toastElement = document.createElement('div');
+            toastElement.className = 'toast';
+            toastElement.setAttribute('role', 'alert');
+            toastElement.setAttribute('aria-live', 'assertive');
+            toastElement.setAttribute('aria-atomic', 'true');
+            
+            // Set background color based on type
+            let bgColor, icon;
+            switch(type) {
+                case 'success':
+                    bgColor = 'bg-success text-white';
+                    icon = 'fas fa-check-circle';
+                    break;
+                case 'error':
+                    bgColor = 'bg-danger text-white';
+                    icon = 'fas fa-exclamation-circle';
+                    break;
+                case 'warning':
+                    bgColor = 'bg-warning';
+                    icon = 'fas fa-exclamation-triangle';
+                    break;
+                default:
+                    bgColor = 'bg-info text-white';
+                    icon = 'fas fa-info-circle';
+            }
+            
+            toastElement.innerHTML = `
+                <div class="toast-header ${bgColor}">
+                    <i class="${icon} me-2"></i>
+                    <strong class="me-auto">Notification</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            `;
+            
+            toastContainer.appendChild(toastElement);
+            
+            // Initialize and show the toast
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: 5000
+            });
+            toast.show();
+            
+            // Remove the toast element after it's hidden
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+
+        // Handle delete confirmation input
+        const deleteConfirmation = document.getElementById('deleteConfirmation');
+        const confirmDeleteBtn = document.getElementById('confirmDelete');
+
+        deleteConfirmation.addEventListener('input', (e) => {
+            confirmDeleteBtn.disabled = e.target.value !== 'DELETE';
+        });
+
+        // Delete Account Form Submission
+        const deleteAccountForm = document.getElementById('deleteAccountForm');
+        deleteAccountForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log('Delete account form submitted');
+
+            confirmDeleteBtn.disabled = true;
+            
+            try {
+                if (!navigator.onLine) {
+                    throw new Error('No internet connection. Please check your network and try again.');
+                }
+
+                const user = auth.currentUser;
+                if (!user) {
+                    throw new Error('No user logged in. Please refresh the page and try again.');
+                }
+
+                const currentPassword = document.getElementById('deletePassword').value;
+                console.log('Starting account deletion process for user:', user.email);
+
+                try {
+                    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+                    await reauthenticateWithCredential(user, credential);
+                    console.log('Authentication successful');
+                } catch (authError) {
+                    console.error('Authentication error:', authError);
+                    if (authError.code === 'auth/wrong-password') {
+                        throw new Error('Incorrect password. Please try again.');
+                    } else {
+                        throw new Error('Authentication error: ' + authError.message);
+                    }
+                }
+
+                try {
+                    console.log('Attempting to delete Firestore document...');
+                    await deleteDoc(doc(db, 'users', user.uid));
+                    console.log('Firestore document deleted successfully');
+                } catch (firestoreError) {
+                    console.error('Error deleting Firestore document:', firestoreError);
+                    showToast("Warning: Could not delete user data, but proceeding with account deletion.", "warning");
+                }
+
+                try {
+                    console.log('Attempting to delete user account...');
+                    await deleteUser(user);
+                    console.log('User account deleted successfully');
+                    showToast("Your account has been successfully deleted.", "success");
+                    setTimeout(() => window.location.href = 'index.html', 2000);
+                } catch (deleteError) {
+                    console.error('Delete user error:', deleteError);
+                    if (deleteError.code === 'auth/requires-recent-login') {
+                        throw new Error('For security reasons, please log out and log back in before deleting your account.');
+                    } else {
+                        throw new Error('Error deleting account: ' + deleteError.message);
+                    }
+                }
+            } catch (error) {
+                console.error('Final error:', error);
+                showToast(error.message, "error");
+            } finally {
+                confirmDeleteBtn.disabled = deleteConfirmation.value !== 'DELETE';
+            }
+        });
+
+        // Security Form Submission
+        const securityForm = document.getElementById('securityForm');
+        securityForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitButton = securityForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    throw new Error('Please log in again to change your password.');
+                }
+
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+
+                if (newPassword !== confirmPassword) {
+                    throw new Error('New passwords do not match!');
+                }
+
+                if (newPassword.length < 6) {
+                    throw new Error('New password must be at least 6 characters long.');
+                }
+
+                try {
+                    // Create credential and reauthenticate
+                    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+                    await reauthenticateWithCredential(user, credential);
+                    
+                    // Update password
+                    await updatePassword(user, newPassword);
+                    
+                    showToast('Password changed successfully!', 'success');
+                    securityForm.reset();
+                } catch (authError) {
+                    console.error('Authentication error:', authError);
+                    if (authError.code === 'auth/wrong-password') {
+                        throw new Error('Current password is incorrect!');
+                    } else if (authError.code === 'auth/network-request-failed') {
+                        throw new Error('Network error. Please check your internet connection and try again.');
+                    } else if (authError.code === 'auth/requires-recent-login') {
+                        throw new Error('For security reasons, please log out and log back in before changing your password.');
+                    } else {
+                        throw new Error('Authentication error: ' + authError.message);
+                    }
+                }
+            } catch (error) {
+                console.error('Error changing password:', error);
+                showToast(error.message, 'error');
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+
+        // Set persistence to local
+        setPersistence(auth, browserLocalPersistence)
+            .then(() => {
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        try {
+                            console.log("User is logged in:", user.uid);
+                            const userDoc = await getDoc(doc(db, 'users', user.uid));
+                            if (userDoc.exists()) {
+                                const userData = userDoc.data();
+                                console.log("User data found:", userData);
+                                
+                                document.getElementById('email').value = userData.email || '';
+                                document.getElementById('username').value = userData.userName || '';
+                                document.getElementById('firstname').value = userData.firstName || '';
+                                document.getElementById('lastname').value = userData.lastName || '';
+                                document.getElementById('role').value = userData.role || '';
+                            } else {
+                                console.error("No user document found for ID:", user.uid);
+                                showToast("Error: User data not found. Please try logging in again.", "error");
+                                setTimeout(() => window.location.href = 'index.html', 2000);
+                            }
+                        } catch (error) {
+                            console.error("Error loading user data:", error);
+                            showToast("Error loading user data. Please try refreshing the page.", "error");
+                        }
+                    } else {
+                        console.log("No user logged in");
+                        window.location.href = 'index.html';
+                    }
+                });
+            })
+            .catch((error) => {
+                console.error("Error setting persistence:", error);
+                showToast("Error setting up authentication. Please try refreshing the page.", "error");
+            });
+
+        // Logout functionality
+        document.querySelector('.logoutBTN').addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (confirm('Are you sure you want to logout?')) {
+                try {
+                    await signOut(auth);
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    showToast('Error logging out: ' + error.message, "error");
+                }
+            }
+        });
+    </script>
+</body>
+</html>

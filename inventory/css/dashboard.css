@@ -1,0 +1,200 @@
+/* Base styles */
+.accordion-button:not(.collapsed) {
+    background-color: #f8f9fa;
+    color: #0d6efd;
+}
+
+.accordion-button:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Sidebar styles */
+.sidebar {
+    width: 280px;
+    min-width: 280px;
+    height: 100vh;
+    background-color: #fff;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+.main-content {
+    margin-left: 280px;
+    width: calc(100% - 280px);
+    min-height: 100vh;
+    padding: 1.5rem;
+    background-color: #f8f9fa;
+}
+
+.room-item a{
+    text-decoration: none;
+    color: inherit;
+}
+.room-item a:hover {
+    color: #36BFFA;
+}
+
+/* Room Details Modal */
+.modal-main {
+    z-index: 1055 !important;
+}
+
+.modal-main .modal-dialog {
+    max-width: 800px;
+    margin: 1.75rem auto;
+    pointer-events: auto !important;
+}
+
+.modal-main .modal-content {
+    border-radius: 0.5rem;
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    pointer-events: auto !important;
+}
+
+.modal-backdrop {
+    z-index: 1054 !important;
+}
+
+.room-details-header {
+    padding: 1.5rem;
+    background: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 0.5rem 0.5rem 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    pointer-events: auto !important;
+}
+
+.room-details-header .modal-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.room-details-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    background-color: #f8f9fa;
+    pointer-events: auto !important;
+}
+
+/* Equipment List Styles */
+.equipment-list {
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    padding: 1rem;
+}
+
+.list-group-item {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    margin-bottom: 0.5rem;
+    border-radius: 0.5rem !important;
+    padding: 0.75rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Status Badges */
+.status-badge {
+    font-size: 0.875rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 2rem;
+    font-weight: 500;
+}
+
+.status-maintenance {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-repair {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Close Button */
+.modal-main .btn-close {
+    background-color: transparent;
+    border: none;
+    font-size: 1.5rem;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+    padding: 0.5rem;
+    margin: -0.5rem -0.5rem -0.5rem auto;
+}
+
+.modal-main .btn-close:hover {
+    opacity: 1;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .modal-main .modal-dialog {
+        max-width: 90%;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .modal-main .modal-dialog {
+        max-width: 100%;
+        margin: 1rem;
+    }
+
+    .modal-main .modal-content {
+        border-radius: 0;
+    }
+
+    .room-details-header {
+        border-radius: 0;
+    }
+}
+
+/* Card Styles */
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: 0.75rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: #fff;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 1.25rem;
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.card-body {
+    padding: 1.25rem;
+}

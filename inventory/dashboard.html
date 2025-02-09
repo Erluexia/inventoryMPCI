@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>MCPI Inventory</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+        <link rel="stylesheet" href="css/scrollbar.css  ">
+        <link rel="stylesheet" href="css/dashboard.css">
+        <style>
+            /* Activity Log Styling */
+            .activity-log-content {
+                max-height: calc(100vh - 300px);
+                overflow-y: auto;
+            }
+
+            .accSetText:hover {
+                color: #0d6efd;
+            }
+
+            .logoutText:hover {
+                color: #dc3545;
+            }
+
+            .activity-log-item {
+                transition: background-color 0.2s ease;
+                border-left: 4px solid transparent;
+            }
+
+            .activity-log-item:hover {
+                background-color: #f8f9fa;
+                border-left-color: #0d6efd;
+            }
+
+            .activity-log-item .badge {
+                font-weight: 500;
+                padding: 0.4em 0.8em;
+            }
+
+            #refreshActivityLog {
+                transition: transform 0.3s ease;
+            }
+
+            #refreshActivityLog:active {
+                transform: rotate(180deg);
+            }
+
+            /* Accordion Styling */
+            .accordion-button:not(.collapsed) {
+                background-color: #f8f9fa;
+                color: #0d6efd;
+                box-shadow: none;
+            }
+
+            .accordion-button:focus {
+                box-shadow: none;
+                border-color: rgba(13, 110, 253, 0.1);
+            }
+
+            .accordion-button::after {
+                background-size: 14px;
+            }
+
+            .list-group-item-action {
+                border: none;
+                padding: 0.75rem 1rem;
+                transition: all 0.2s ease;
+            }
+
+            .list-group-item-action:hover {
+                background-color: #f8f9fa;
+                transform: translateX(5px);
+            }
+
+            .list-group-item-action .fa-chevron-right {
+                font-size: 0.8rem;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            }
+
+            .list-group-item-action:hover .fa-chevron-right {
+                opacity: 1;
+            }
+
+            .accordion-item {
+                background: transparent;
+            }
+
+            .accordion-button {
+                background-color: white;
+                transition: all 0.2s ease;
+            }
+
+            .accordion-button:hover {
+                background-color: #f8f9fa;
+            }
+            
+            .toast-container {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 1060;
+            }
+            .toast {
+                background-color: white;
+                min-width: 300px;
+            }
+        </style>
+    </head>
+<body class="bg-light">
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <div class="sidebar p-4">
+            <h1 class="h3 text-primary mb-4 fw-bold">MCPI / SHS Inventory</h1>
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary" id="manageRoomsBtn">
+                    <i class="fas fa-door-open me-2"></i>Manage Rooms
+                </button>
+                <button class="btn btn-info" id="activityLogBtn">
+                    <i class="fas fa-history me-2"></i>Activity Log
+                </button>
+                <button class="btn btn-sm btn-outline-primary" id="manageFloorsBtn" data-bs-toggle="modal" data-bs-target="#floorManagementModal">
+                    <i class="fas fa-cog"></i> Manage Floors
+                </button>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mt-3 mb-0">Floors</h2>
+            </div>
+            <div class="d-flex gap-2 mb-3">
+            </div>
+            <!-- Floor Accordion -->
+            <div class="accordion shadow-sm rounded" id="floorAccordion">
+                <!-- Floors will be dynamically added here -->
+            </div>
+            <div class="m-auto text-centers">
+                <a href="accountSettings.html" class="accSet d-flex align-items-center text-decoration-none text-secondary mb-2">
+                    <span class="accSetText p-1"><i class="fas fa-cog me-2"></i> Account Settings</span>
+                </a>
+                <a href="#" class="logoutBTN d-flex align-items-center text-decoration-none text-secondary">
+                    <span class="logoutText logoutBTN p-1"><i class="fas fa-sign-out-alt me-2"></i>Logout</span>
+                </a>
+            </div>
+        </div>
+        <!-- Main Content -->
+        <div class="main-content flex-grow-1">
+            <div class="container-fluid px-4 py-4">
+                <!-- Main Content Area -->
+                <div id="mainContentArea">
+                    <!-- Default Dashboard Content -->
+                    <div id="defaultDashboard">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <h1 class="h2 mb-0">Dashboard</h1>
+                                <p class="text-muted mb-0">Overview of inventory status</p>
+                            </div>
+                            <button id="refreshDashboard" class="btn btn-outline-primary">
+                                <i class="fas fa-sync-alt me-2"></i>Refresh
+                            </button>
+                        </div>
+
+                        <!-- Overall Statistics -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="flex-shrink-0">
+                                                <div class="stats-icon bg-primary bg-opacity-10 text-primary rounded p-3">
+                                                    <i class="fas fa-door-open"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <h6 class="card-subtitle text-muted mb-1">Total Rooms</h6>
+                                                <h2 class="card-title h4 mb-0" id="totalRooms">0</h2>
+                                            </div>
+                                        </div>
+                                        <div class="progress" style="height: 4px;">
+                                            <div class="progress-bar bg-primary" style="width: 100%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="flex-shrink-0">
+                                                <div class="stats-icon bg-success bg-opacity-10 text-success rounded p-3">
+                                                    <i class="fas fa-tools"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <h6 class="card-subtitle text-muted mb-1">Total Equipment</h6>
+                                                <h2 class="card-title h4 mb-0" id="totalEquipment">0</h2>
+                                            </div>
+                                        </div>
+                                        <div class="progress" style="height: 4px;">
+                                            <div class="progress-bar bg-success" style="width: 100%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="flex-shrink-0">
+                                                <div class="stats-icon bg-warning bg-opacity-10 text-warning rounded p-3">
+                                                    <i class="fas fa-wrench"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <h6 class="card-subtitle text-muted mb-1">Need Maintenance</h6>
+                                                <h2 class="card-title h4 mb-0" id="totalMaintenance">0</h2>
+                                            </div>
+                                        </div>
+                                        <div class="progress" style="height: 4px;">
+                                            <div class="progress-bar bg-warning" style="width: 100%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="flex-shrink-0">
+                                                <div class="stats-icon bg-danger bg-opacity-10 text-danger rounded p-3">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <h6 class="card-subtitle text-muted mb-1">Need Replacement</h6>
+                                                <h2 class="card-title h4 mb-0" id="totalReplacements">0</h2>
+                                            </div>
+                                        </div>
+                                        <div class="progress" style="height: 4px;">
+                                            <div class="progress-bar bg-danger" style="width: 100%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Floor Summaries -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-header bg-white py-3">
+                                        <h5 class="card-title mb-0">Floor Summaries</h5>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div id="floorSummaries" class="accordion accordion-flush">
+                                            <!-- Floor summaries will be dynamically added here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Room Details Section -->
+                    <div id="roomDetailsSection" class="d-none">
+                        <!-- Room details will be dynamically loaded here -->
+                    </div>
+
+                    <!-- Activity Log Section -->
+                    <div id="activityLogSection" class="d-none">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <button id="backToDashboard" class="btn btn-link text-decoration-none text-secondary mb-2">
+                                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                                </button>
+                                <h1 class="h2 mb-0">Activity Log</h1>
+                                <p class="text-muted mb-0">Track all system activities and changes</p>
+                            </div>
+                            <button id="refreshActivityLog" class="btn btn-outline-primary">
+                                <i class="fas fa-sync-alt me-2"></i>
+                                Refresh
+                            </button>
+                        </div>
+
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-white py-3">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label small text-muted mb-1">Filter by Activity</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light border-end-0">
+                                                <i class="fas fa-filter text-muted"></i>
+                                            </span>
+                                            <select class="form-select border-start-0" id="activityTypeFilter">
+                                                <option value="">All Activities</option>
+                                                <option value="create">Create</option>
+                                                <option value="update">Update</option>
+                                                <option value="delete">Delete</option>
+                                                <option value="add">Add</option>
+                                                <option value="remove">Remove</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small text-muted mb-1">Filter by Role</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light border-end-0">
+                                                <i class="fas fa-user-tag text-muted"></i>
+                                            </span>
+                                            <select class="form-select border-start-0" id="userRoleFilter">
+                                                <option value="">All Roles</option>
+                                                <option value="admin">Admin</option>
+                                                <option value="faculty">Faculty</option>
+                                                <option value="it office">IT Office</option>
+                                                <option value="property custodian">Property Custodian</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small text-muted mb-1">Search Activities</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light border-end-0">
+                                                <i class="fas fa-search text-muted"></i>
+                                            </span>
+                                            <input type="text" class="form-control border-start-0" id="searchActivity" placeholder="Search activities...">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <!-- Activity Log Content -->
+                                <div id="activityLogContainer" class="activity-log-content">
+                                    <!-- Activity logs will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmationMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmActionBtn">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal Template -->
+    <template id="confirmationModalTemplate">
+        <div class="modal fade" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger confirm-btn">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Room Management Modal Template -->
+    <template id="roomManagementModalTemplate">
+        <div class="modal fade" id="roomManagementModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Manage Rooms</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <!-- Add Room Form -->
+                                <form id="addRoomForm" class="mb-4">
+                                    <h6>Add New Room</h6>
+                                    <div class="mb-3">
+                                        <label for="floorSelect" class="form-label">Floor</label>
+                                        <select class="form-select" id="floorSelect" required>
+                                            <option value="">Select a floor</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="roomNumber" class="form-label">Room Number</label>
+                                        <input type="text" class="form-control" id="roomNumber" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="roomName" class="form-label">Room Name</label>
+                                        <input type="text" class="form-control" id="roomName" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Add Room</button>
+                                </form>
+                            </div>
+
+                            <!-- Remove Room Form -->
+                            <div class="col-md-6">
+                                <form id="removeRoomForm" class="mb-4">
+                                    <h6>Remove Room</h6>
+                                    <div class="mb-3">
+                                        <label for="floorSelectRemove" class="form-label">Floor</label>
+                                        <select class="form-select" id="floorSelectRemove" required>
+                                            <option value="">Select a floor</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="roomSelectRemove" class="form-label">Room</label>
+                                        <select class="form-select" id="roomSelectRemove" required disabled>
+                                            <option value="">Select a room</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-danger" id="removeRoomBtn" disabled>Remove Room</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Activity Log Modal Template -->
+    <template id="activityLogModalTemplate">
+        <div class="modal fade" id="activityLogModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-light">
+                        <h5 class="modal-title">
+                            <i class="fas fa-history me-2"></i>Activity Log
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <!-- Activity Log Filters -->
+                        <div class="bg-light border-bottom p-3">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <select class="form-select form-select-sm" id="activityTypeFilter">
+                                        <option value="">All Activities</option>
+                                        <option value="create">Create</option>
+                                        <option value="update">Update</option>
+                                        <option value="delete">Delete</option>
+                                        <option value="add">Add</option>
+                                        <option value="remove">Remove</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-select form-select-sm" id="userRoleFilter">
+                                        <option value="">All Roles</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="faculty">Faculty</option>
+                                        <option value="it office">IT Office</option>
+                                        <option value="property custodian">Property Custodian</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control form-control-sm" id="searchActivity" placeholder="Search activities...">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Activity Log Content -->
+                        <div id="activityLogContainer" class="activity-log-content">
+                            <div id="activityLogContent" class="list-group list-group-flush" style="max-height: 60vh; overflow-y: auto;">
+                                <!-- Activity logs will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Floor Management Modal -->
+    <div class="modal fade" id="floorManagementModal" tabindex="-1" aria-labelledby="floorManagementModalLabel" aria-modal="true" role="dialog aria-hidden="true"">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="floorManagementModalLabel">Manage Floors</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addFloorForm" class="mb-4">
+                        <div class="mb-3">
+                            <label for="floorNumber" class="form-label">Floor Number</label>
+                            <input type="number" class="form-control" id="floorNumber" required min="1" aria-describedby="floorNumberHelp">
+                            <small id="floorNumberHelp" class="form-text text-muted">Enter a floor number</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="floorName" class="form-label">Floor Name</label>
+                            <input type="text" class="form-control" id="floorName" placeholder="e.g., Ground Floor, First Floor" aria-describedby="floorNameHelp">
+                            <small id="floorNameHelp" class="form-text text-muted">Optional descriptive name for the floor</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Floor</button>
+                    </form>
+
+                    <h6>Existing Floors</h6>
+                    <div id="floorsList" class="list-group" role="list" aria-label="List of existing floors">
+                        <!-- Floors will be added here dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div class="modal fade" id="searchModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Search Rooms</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search rooms...">
+                    </div>
+                    <div id="searchResults" class="list-group">
+                        <!-- Search results will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Details Full Page Modal Template -->
+    <template id="roomDetailsModalTemplate">
+        <div class="modal fade modal-main" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="roomDetailsForm">
+                            <div class="row">
+                                <!-- Left Column -->
+                                <div class="col-md-8">
+                                    <div class="card mb-3">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h5 class="mb-0">Equipment</h5>
+                                            <button type="button" class="btn btn-primary btn-sm" id="showAddEquipmentModalBtn">
+                                                <i class="fas fa-plus me-1"></i> Add Equipment
+                                            </button>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="input-group mb-3">
+                                                <input type="text" class="form-control" placeholder="Search equipment...">
+                                                <button class="btn btn-outline-secondary" type="button">
+                                                    <i class="fas fa-search"></i>
+                                                </button>
+                                            </div>
+                                            <div id="equipmentList" class="list-group"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Right Column -->
+                                <div class="col-md-4">
+                                    <!-- Room Capacity -->
+                                    <div class="card mb-3">
+                                        <div class="card-header">
+                                            <h5 class="mb-0">Room Capacity</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-group">
+                                                <input type="number" class="form-control" id="roomCapacity" min="0">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Maintenance List -->
+                                    <div class="card mb-3">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h5 class="mb-0">Maintenance</h5>
+                                            <button type="button" class="btn btn-primary btn-sm" id="addMaintenanceBtn">
+                                                <i class="fas fa-plus me-1"></i> Add
+                                            </button>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="maintenanceList" class="list-group"></div>
+                                        </div>
+                                    </div>
+                                    <!-- Replacements List -->
+                                    <div class="card mb-3">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h5 class="mb-0">Replacements</h5>
+                                            <button type="button" class="btn btn-primary btn-sm" id="addReplacementBtn">
+                                                <i class="fas fa-plus me-1"></i> Add
+                                            </button>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="replacementList" class="list-group"></div>
+                                        </div>
+                                    </div>
+                                    <!-- Action Buttons -->
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-1"></i> Save Changes
+                                        </button>
+                                        <button type="button" class="btn btn-danger" id="deleteCurrentRoomBtn">
+                                            <i class="fas fa-trash-alt me-1"></i> Delete Room
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Add Equipment Modal Template -->
+    <template id="addEquipmentModalTemplate">
+        <div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addEquipmentModalLabel">Add Equipment</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addEquipmentForm">
+                            <div class="mb-3">
+                                <label for="equipmentName" class="form-label">Equipment Name</label>
+                                <input type="text" class="form-control" id="equipmentName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="equipmentQuantity" class="form-label">Quantity</label>
+                                <input type="number" class="form-control" id="equipmentQuantity" min="1" value="1" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="equipmentCondition" class="form-label">Condition</label>
+                                <select class="form-select" id="equipmentCondition" required>
+                                    <option value="Good">Good</option>
+                                    <option value="Fair">Fair</option>
+                                    <option value="Poor">Poor</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="equipmentStatus" class="form-label">Status</label>
+                                <select class="form-select" id="equipmentStatus" required>
+                                    <option value="Available">Available</option>
+                                    <option value="In Use">In Use</option>
+                                    <option value="Under Maintenance">Under Maintenance</option>
+                                    <option value="Out of Service">Out of Service</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="equipmentNotes" class="form-label">Notes</label>
+                                <textarea class="form-control" id="equipmentNotes" rows="3"></textarea>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Add Equipment</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Delete Room Confirmation Modal -->
+    <div class="modal fade" id="deleteRoomConfirmationModal" tabindex="-1" aria-labelledby="deleteRoomConfirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteRoomConfirmationModalLabel">Delete Room</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="deleteRoomMessage"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteRoomBtn">Delete Room</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/firebase-config.js" type="module"></script>
+
+    <script type="module">
+        import { signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-auth.js';
+
+        // Toast notification function
+        function showToast(message, type = 'info') {
+            const toastContainer = document.querySelector('.toast-container');
+            
+            const toastElement = document.createElement('div');
+            toastElement.className = 'toast';
+            toastElement.setAttribute('role', 'alert');
+            toastElement.setAttribute('aria-live', 'assertive');
+            toastElement.setAttribute('aria-atomic', 'true');
+            
+            let bgColor, icon;
+            switch(type) {
+                case 'success':
+                    bgColor = 'bg-success text-white';
+                    icon = 'fas fa-check-circle';
+                    break;
+                case 'error':
+                    bgColor = 'bg-danger text-white';
+                    icon = 'fas fa-exclamation-circle';
+                    break;
+                case 'warning':
+                    bgColor = 'bg-warning';
+                    icon = 'fas fa-exclamation-triangle';
+                    break;
+                default:
+                    bgColor = 'bg-info text-white';
+                    icon = 'fas fa-info-circle';
+            }
+            
+            toastElement.innerHTML = `
+                <div class="toast-header ${bgColor}">
+                    <i class="${icon} me-2"></i>
+                    <strong class="me-auto">Notification</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            `;
+            
+            toastContainer.appendChild(toastElement);
+            
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: 5000
+            });
+            toast.show();
+            
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+
+        // Confirmation modal function
+        function showConfirmation(message, onConfirm, confirmButtonText = 'Confirm', confirmButtonClass = 'btn-primary') {
+            const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+            const confirmBtn = document.getElementById('confirmActionBtn');
+            
+            document.getElementById('confirmationMessage').textContent = message;
+            confirmBtn.textContent = confirmButtonText;
+            confirmBtn.className = `btn ${confirmButtonClass}`;
+            
+            const handleConfirm = () => {
+                modal.hide();
+                onConfirm();
+                confirmBtn.removeEventListener('click', handleConfirm);
+            };
+            
+            confirmBtn.addEventListener('click', handleConfirm);
+            modal.show();
+        }
+
+        // Update the logout functionality
+        document.querySelector('.logoutBTN').addEventListener('click', (e) => {
+            e.preventDefault();
+            showConfirmation(
+                'Are you sure you want to log out?',
+                async () => {
+                    try {
+                        await signOut(auth);
+                        showToast('Successfully logged out!', 'success');
+                        setTimeout(() => window.location.href = 'index.html', 1000);
+                    } catch (error) {
+                        showToast('Error logging out: ' + error.message, 'error');
+                    }
+                },
+                'Log Out',
+                'btn-warning'
+            );
+        });
+
+        // Update delete functionality (if you have any)
+        const deleteButtons = document.querySelectorAll('.delete-btn');
+        deleteButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const itemId = btn.dataset.id;
+                const itemName = btn.dataset.name || 'this item';
+                
+                showConfirmation(
+                    `Are you sure you want to delete ${itemName}? This action cannot be undone.`,
+                    async () => {
+                        try {
+                            // Your delete logic here
+                            await deleteDoc(doc(db, 'your-collection', itemId));
+                            showToast(`${itemName} has been deleted successfully.`, 'success');
+                            // Refresh the list or remove the item from DOM
+                        } catch (error) {
+                            showToast('Error deleting item: ' + error.message, 'error');
+                        }
+                    },
+                    'Delete',
+                    'btn-danger'
+                );
+            });
+        });
+
+        // Update any other confirmation dialogs in your code...
+    </script>
+
+    <script type="module" src="js/roomManagement.js"></script>
+</body>
+</html>
