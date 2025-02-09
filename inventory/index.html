@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCPI Inventory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm">
+        <h2 class="text-2xl font-bold text-center text-blue-600 mb-2">Welcome Back</h2>
+        <p class="text-center text-gray-600 mb-6">Sign in to MCPI Inventory System</p>
+        <form id="login-form">
+            <div class="mb-4">
+                <label class="block text-gray-700 font-bold mb-2" for="email">Email Address</label>
+                <div class="flex items-center border border-gray-300 rounded-lg px-3 py-2">
+                    <i class="fas fa-envelope text-gray-400 mr-2"></i>
+                    <input class="w-full outline-none" type="email" id="email" placeholder="Enter your email" required>
+                </div>
+                <p id="email-error" class="text-red-500 text-sm hidden"></p>
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 font-bold mb-2" for="password">Password</label>
+                <div class="flex items-center border border-gray-300 rounded-lg px-3 py-2">
+                    <i class="fas fa-lock text-gray-400 mr-2"></i>
+                    <input class="w-full outline-none" type="password" id="password" placeholder="Enter your password" required>
+                    <button class="btn btn-outline-secondary border-0 text-gray-500 cursor-pointer" type="button" id="togglePassword">
+                      <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+                <p id="password-error" class="text-red-500 text-sm hidden"></p>
+            </div>
+            <button type="submit" class="w-full bg-blue-500 text-white font-bold py-2 rounded-lg hover:bg-blue-600 transition duration-200">Sign In</button>
+        </form>
+        <p class="text-center text-gray-600 mt-4">Don't have an account? <a href="createAccount.html" class="text-blue-500 font-bold">Create Account</a></p>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="successModalLabel">Login Successful</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    You have successfully logged in! Redirecting to the dashboard...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/9.14.0/firebase-auth.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDEj4Gf9KB-y21YBl7roSyR0C8VMS9NKqA",
+            authDomain: "maryknoll-inventory.firebaseapp.com",
+            projectId: "maryknoll-inventory",
+            storageBucket: "maryknoll-inventory.firebasestorage.app",
+            messagingSenderId: "1031596926539",
+            appId: "1:1031596926539:web:831752736f14a7e6778fce",
+            measurementId: "G-HR9CZTDHGY"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Functionality to toggle password visibility
+            document.getElementById('togglePassword').addEventListener('click', function () {
+                const passwordInput = document.getElementById('password');
+                const icon = this.querySelector('i');
+
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    passwordInput.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+
+            // Handle form submission
+            document.getElementById('login-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const emailError = document.getElementById('email-error');
+                const passwordError = document.getElementById('password-error');
+
+                try {
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    if (!user.emailVerified) {
+                        emailError.textContent = 'Email not verified. Please check your inbox.';
+                        emailError.classList.remove('hidden');
+                        return;
+                    }
+                    
+                    // Show success modal
+                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+
+                    // Redirect to dashboard after a delay
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 2000);
+                } catch (error) {
+                    console.error('Error logging in: ', error);
+                    if (error.code === 'auth/wrong-password') {
+                        passwordError.textContent = 'Incorrect password. Please try again.';
+                        passwordError.classList.remove('hidden');
+                    } else if (error.code === 'auth/user-not-found') {
+                        emailError.textContent = 'No account found with this email.';
+                        emailError.classList.remove('hidden');
+                    } else {
+                        emailError.textContent = 'Wrong email or password.';
+                        emailError.classList.remove('hidden');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
