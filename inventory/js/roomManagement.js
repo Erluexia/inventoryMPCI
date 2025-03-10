@@ -540,7 +540,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         await loadSavedRooms();
                         await updateFloorsList();
                         await updateAllFloors();
-                        await refreshPageContent();
 
                         showToast('Room removed successfully!', 'success');
 
@@ -1694,7 +1693,6 @@ async function removeFloor(floorId, floorNumber) {
                         updateFloorsList(),  // Update sidebar accordion and modal list
                         updateFloorSelects(), // Update floor select dropdowns
                         updateDashboardStats(), // Update dashboard statistics
-                        refreshPageContent()
                     ]);
 
 
@@ -1993,7 +1991,7 @@ async function addNeedsReplacement(roomId) {
                                     <label class="form-label">Status</label>
                                     <select class="form-select" id="replacementStatus" required>
                                         <option value="Beyond Repair">Beyond Repair</option>
-                                        <option value="Obsolete">Obsolete</option>
+                                        <option value="No Longer Usable">No Longer Usable</option>
                                         <option value="End of Life">End of Life</option>
                                         <option value="Missing">Missing</option>
                                     </select>
